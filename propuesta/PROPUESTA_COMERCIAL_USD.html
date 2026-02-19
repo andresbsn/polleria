@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Propuesta Comercial - Pollería</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: #1e293b;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px;
+            background-color: #ffffff;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 20px;
+        }
+
+        h1 {
+            color: #0f172a;
+            font-size: 2.5em;
+            margin-bottom: 0.2em;
+        }
+
+        h2 {
+            color: #334155;
+            font-size: 1.8em;
+            margin-top: 40px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 10px;
+        }
+
+        h3 {
+            color: #6366f1;
+            font-size: 1.3em;
+            margin-top: 30px;
+            margin-bottom: 15px;
+        }
+
+        p {
+            margin-bottom: 1.2em;
+            text-align: justify;
+        }
+
+        ul {
+            margin-bottom: 20px;
+            padding-left: 20px;
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        .img-container {
+            text-align: center;
+            margin: 30px 0;
+        }
+
+        img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 12px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e2e8f0;
+        }
+
+        .caption {
+            font-size: 0.9em;
+            color: #64748b;
+            margin-top: 8px;
+            font-style: italic;
+        }
+
+        .budget-card {
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+            page-break-inside: avoid;
+        }
+
+        .budget-price {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #0f172a;
+        }
+
+        footer {
+            margin-top: 60px;
+            text-align: center;
+            font-size: 0.9em;
+            color: #94a3b8;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 20px;
+        }
+
+        @media print {
+            body {
+                padding: 0;
+                max-width: 100%;
+            }
+
+            .no-print {
+                display: none;
+            }
+
+            a {
+                text-decoration: none;
+                color: inherit;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h1>Propuesta de Desarrollo</h1>
+        <p style="font-size: 1.2em; color: #64748b;">Sistema de Gestión Integral para Pollería</p>
+    </header>
+
+    <section>
+        <h2>1. Resumen Ejecutivo</h2>
+        <p>
+            Presentamos una solución integral de <strong>Punto de Venta (POS)</strong>, control de stock y
+            administración financiera,
+            diseñada específicamente para optimizar la operación diaria de su pollería. El sistema ha sido construido
+            priorizando la
+            velocidad de atención, la precisión en el manejo de productos pesables (kg/g) y la integración transparente
+            con AFIP para
+            el cumplimiento fiscal automatizado.
+        </p>
+    </section>
+
+    <section>
+        <h2>2. Funcionalidades Principales</h2>
+
+        <h3>A. Punto de Venta (POS) de Alto Rendimiento</h3>
+        <p>Una interfaz visual moderna y ágil, optimizada para reducir los tiempos de espera del cliente.</p>
+        <ul>
+            <li><strong>Interfaz Ágil:</strong> Diseño intuitivo con íconos grandes para identificación rápida de
+                productos.</li>
+            <li><strong>Control de Cantidades Preciso:</strong> Sistema híbrido con botones rápidos de +/- 1kg y ajuste
+                fino de 100g, ideal para venta al peso.</li>
+            <li><strong>Emisión de Tickets:</strong> Generación instantánea de comprobantes internos y <strong>Factura
+                    Electrónica AFIP</strong>.</li>
+            <li><strong>Múltiples Pagos:</strong> Soporte flexible para Efectivo, Tarjetas, Mercado Pago y Cuentas
+                Corrientes.</li>
+        </ul>
+        <div class="img-container">
+            <img src="pos.png" alt="Interfaz POS">
+            <div class="caption">Figura 1: Interfaz de Punto de Venta con modo oscuro y controles de peso optimizados.
+            </div>
+        </div>
+
+        <h3>B. Control de Inventario y Stock</h3>
+        <p>Herramientas para la administración centralizada de mercadería, permitiendo un control total sobre las
+            existencias.</p>
+        <ul>
+            <li><strong>Monitoreo en Tiempo Real:</strong> Descuento automático de stock con cada venta confirmada.</li>
+            <li><strong>Alertas Inteligentes:</strong> Indicadores visuales claros para productos con stock bajo o
+                crítico.</li>
+            <li><strong>Gestión de Precios:</strong> Actualización rápida y centralizada de costos y precios de venta al
+                público.</li>
+        </ul>
+        <div class="img-container">
+            <img src="stock.png" alt="Gestión de Stock">
+            <div class="caption">Figura 2: Panel de gestión de inventario con alertas de stock.</div>
+        </div>
+
+        <h3>C. Reportes y Auditoría</h3>
+        <p>Visibilidad completa sobre el desempeño del negocio y la seguridad de las operaciones.</p>
+        <ul>
+            <li><strong>Historial de Operaciones:</strong> Registro inmutable de cada transacción.</li>
+            <li><strong>Cierres de Caja:</strong> Reportes detallados de ingresos por turno, usuario y método de pago.
+            </li>
+            <li><strong>Auditoría de Usuarios:</strong> Roles diferenciados (Cajero vs. Administrador) para proteger
+                funciones sensibles.</li>
+        </ul>
+        <div class="img-container">
+            <img src="ventas.png" alt="Reporte de Ventas">
+            <div class="caption">Figura 3: Historial de transacciones y estados de facturación.</div>
+        </div>
+    </section>
+
+    <section>
+        <h2>3. Presupuesto y Condiciones</h2>
+        <p>Ofrecemos un modelo de contratación mixto diseñado para facilitar el acceso a una tecnología premium con
+            soporte continuo.</p>
+
+        <div class="budget-card">
+            <div class="budget-price">USD 200 <span
+                    style="font-size: 0.5em; font-weight: normal; color: #64748b;">(Única Vez)</span></div>
+            <h3 style="margin-top: 10px;">Setup e Implementación Inicial</h3>
+            <ul>
+                <li>Despliegue del sistema en servidor privado.</li>
+                <li>Generación y vinculación de certificados digitales AFIP.</li>
+                <li>Carga inicial del catálogo de productos.</li>
+                <li>Configuración de periféricos (impresoras de tickets).</li>
+                <li>Capacitación del personal y puesta en marcha.</li>
+            </ul>
+        </div>
+
+        <div class="budget-card">
+            <div class="budget-price">USD 40 <span
+                    style="font-size: 0.5em; font-weight: normal; color: #64748b;">(Mensual)</span></div>
+            <h3 style="margin-top: 10px;">Abono de Servicio y Mantenimiento</h3>
+            <ul>
+                <li><strong>Hosting Premium:</strong> Alojamiento de alta disponibilidad y rendimiento.</li>
+                <li><strong>Seguridad:</strong> Backups diarios automáticos y protección de datos.</li>
+                <li><strong>Conectividad AFIP:</strong> Mantenimiento de la conexión con servicios fiscales.</li>
+                <li><strong>Soporte Técnico:</strong> Asistencia prioritaria ante incidencias.</li>
+            </ul>
+        </div>
+
+        <p><strong>Plazo de Implementación:</strong> 7 días hábiles.</p>
+        <p><strong>Condiciones de Pago:</strong> 50% al inicio del proyecto y 50% contra entrega final.</p>
+    </section>
+
+    <footer>
+        <p>Generado automáticamante por el Sistema de Asistencia de Desarrollo</p>
+    </footer>
+
+    <script>
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,8 @@
+ALTER TABLE products ADD COLUMN IF NOT EXISTS unit VARCHAR(10) DEFAULT 'UNIT';
+
+UPDATE products
+SET unit = CASE
+    WHEN LOWER(name) LIKE '%kg%' THEN 'KG'
+    ELSE 'UNIT'
+END
+WHERE unit IS NULL;
