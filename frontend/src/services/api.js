@@ -36,31 +36,31 @@ api.interceptors.response.use(
     }
 );
 
-export const login = (username, password) => api.post('/api/auth/login', { username, password });
+export const login = (username, password) => api.post('/auth/login', { username, password });
 
-export const getProducts = () => api.get('/api/products');
-export const createProduct = (data) => api.post('/api/products', data);
-export const updateProduct = (id, data) => api.put(`/api/products/${id}`, data);
-export const createSale = (data) => api.post('/api/sales', data);
-export const getSales = () => api.get('/api/sales');
-export const getSaleById = (id) => api.get(`/api/sales/${id}`);
-export const retryInvoice = (data) => api.post('/api/sales/retry-invoice', data);
+export const getProducts = () => api.get('/products');
+export const createProduct = (data) => api.post('/products', data);
+export const updateProduct = (id, data) => api.put(`/products/${id}`, data);
+export const createSale = (data) => api.post('/sales', data);
+export const getSales = () => api.get('/sales');
+export const getSaleById = (id) => api.get(`/sales/${id}`);
+export const retryInvoice = (data) => api.post('/sales/retry-invoice', data);
 
-export const getClients = () => api.get('/api/clients');
-export const createClient = (data) => api.post('/api/clients', data);
-export const getClientById = (id) => api.get(`/api/clients/${id}`);
-export const registerClientPayment = (data) => api.post('/api/clients/payment', data);
+export const getClients = () => api.get('/clients');
+export const createClient = (data) => api.post('/clients', data);
+export const getClientById = (id) => api.get(`/clients/${id}`);
+export const registerClientPayment = (data) => api.post('/clients/payment', data);
 
-export const getCategories = () => api.get('/api/categories');
-export const createCategory = (data) => api.post('/api/categories', data);
-export const setCategoryActive = (id, data) => api.put(`/api/categories/${id}`, data);
+export const getCategories = () => api.get('/categories');
+export const createCategory = (data) => api.post('/categories', data);
+export const setCategoryActive = (id, data) => api.put(`/categories/${id}`, data);
 
-export const listUsers = () => api.get('/api/admin/users');
-export const createUser = (data) => api.post('/api/admin/users', data);
+export const listUsers = () => api.get('/admin/users');
+export const createUser = (data) => api.post('/admin/users', data);
 
-export const getCashCurrent = () => api.get('/api/cash/current');
-export const openCashSession = (data) => api.post('/api/cash/open', data);
-export const closeCashSession = (data) => api.post('/api/cash/close', data);
-export const getCashMovements = (params) => api.get('/api/cash/movements', { params });
+export const getCashCurrent = () => api.get('/cash/current');
+export const openCashSession = (data) => api.post('/cash/open', data);
+export const closeCashSession = (data) => api.post('/cash/close', data);
+export const getCashMovements = (params) => api.get('/cash/movements', { params });
 
 export default api;
