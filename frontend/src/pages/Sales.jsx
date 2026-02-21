@@ -1,32 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { getSales, retryInvoice, getSaleById } from '../services/api';
 import { FaFileInvoice, FaCheckCircle, FaExclamationTriangle, FaRedo, FaSearch } from 'react-icons/fa';
-import Ticket from '../components/Ticket';
 
 const Sales = () => {
     const [sales, setSales] = useState([]);
     const [loading, setLoading] = useState(false);
     const [retryLoading, setRetryLoading] = useState(null);
-    const [saleToPrint, setSaleToPrint] = useState(null);
-    const componentRef = useRef();
 
     useEffect(() => {
         loadSales();
     }, []);
-
-    // Effect to trigger print when saleToPrint is ready
-    useEffect(() => {
-        if (saleToPrint) {
-            // Small delay to ensure render
-            setTimeout(() => {
-                window.print();
-                // Optional: clear saleToPrint after printing if needed, 
-                // but usually user might want to print again or close manually.
-                // Resetting it might hide the component too fast for the print dialog.
-                // Better strategy: keep it there, maybe clear on new selection or simple timeout logic isn't perfect but works for now.
-             }, 500);
-        }
-    }, [saleToPrint]);
 
     const loadSales = async () => {
         setLoading(true);
@@ -44,7 +27,7 @@ const Sales = () => {
         setRetryLoading(saleId);
         try {
             await retryInvoice({ saleId });
-            await loadSales(); // Refresh list to see new status
+            await loadSales();
         } catch (error) {
             console.error("Retry failed", error);
             alert("Retry failed: " + (error.response?.data?.error || error.message));
@@ -55,8 +38,163 @@ const Sales = () => {
 
     const handlePrint = async (saleId) => {
         try {
-            const { data } = await getSaleById(saleId);
-            setSaleToPrint(data);
+            const { data: sale } = await getSaleById(saleId);
+
+            const ventana = window.open('', '_blank', 'width=600,height=900');
+            if (!ventana) {
+                alert('Habilite las ventanas emergentes para ver la factura.');
+                return;
+            }
+
+            const razonSocial = 'Los Nonos';
+            const cuit = '20-43056237-2';
+            const domicilio = '24 de Octubre, Villa Ramallo';
+            const condicionIVA = 'Responsable Inscripto';
+
+            const total = Number(sale.total || 0);
+            const neto = (total / 1.105).toFixed(2);
+            const iva = (total - total / 1.105).toFixed(2);
+
+            const tipoComp = sale.cbte_tipo === 1 ? 'A' : sale.cbte_tipo === 6 ? 'B' : sale.cbte_tipo === 11 ? 'C' : 'B';
+            const nroComp = sale.pto_vta && sale.cbte_nro
+                ? `${String(sale.pto_vta).padStart(4, '0')}-${String(sale.cbte_nro).padStart(8, '0')}`
+                : '-';
+
+            const fecha = sale.created_at ? new Date(sale.created_at).toLocaleDateString('es-AR', {
+                day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+            }) : '-';
+
+            const formatMonto = (m) => new Intl.NumberFormat('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(m);
+
+            const formatVtoCAE = (vto) => {
+                if (!vto) return '-';
+                const str = String(vto).replace(/-/g, '');
+                if (str.length === 8) return `${str.slice(6, 8)}/${str.slice(4, 6)}/${str.slice(0, 4)}`;
+                return new Date(vto).toLocaleDateString('es-AR');
+            };
+
+            const contenido = `
+            <html>
+            <head>
+                <title>Factura ${nroComp}</title>
+                <style>
+                    * { margin: 0; padding: 0; box-sizing: border-box; }
+                    body { font-family: 'Arial', sans-serif; padding: 20px; color: #333; font-size: 12px; }
+                    .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 12px; margin-bottom: 12px; }
+                    .header h1 { font-size: 18px; margin-bottom: 4px; }
+                    .tipo-factura { display: inline-block; border: 2px solid #333; padding: 4px 16px; font-size: 22px; font-weight: bold; margin: 8px 0; }
+                    .datos-emisor { margin-bottom: 12px; border-bottom: 1px solid #ccc; padding-bottom: 8px; }
+                    .datos-emisor p { margin: 2px 0; }
+                    .datos-factura { display: flex; justify-content: space-between; border-bottom: 1px solid #ccc; padding-bottom: 8px; margin-bottom: 12px; }
+                    .datos-factura .col { flex: 1; }
+                    .row { margin: 4px 0; display: flex; justify-content: space-between; }
+                    .label { font-weight: bold; }
+                    .items-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+                    .items-table th, .items-table td { padding: 4px 8px; text-align: left; border-bottom: 1px solid #eee; }
+                    .items-table th { border-bottom: 2px solid #333; }
+                    .totales { border-top: 2px solid #333; margin-top: 12px; padding-top: 8px; }
+                    .total-final { font-size: 16px; font-weight: bold; margin-top: 8px; }
+                    .cae-section { margin-top: 16px; border-top: 2px solid #333; padding-top: 8px; text-align: center; }
+                    .cae-section .cae-number { font-size: 14px; font-weight: bold; letter-spacing: 1px; }
+                    .status-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-weight: bold; font-size: 11px; }
+                    .status-approved { background: #d4edda; color: #155724; }
+                    .status-error { background: #f8d7da; color: #721c24; }
+                    .footer { margin-top: 16px; text-align: center; font-size: 10px; color: #666; }
+                    @media print { body { padding: 0; } }
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                    <h1>${razonSocial}</h1>
+                    <div class="tipo-factura">${tipoComp}</div>
+                </div>
+
+                <div class="datos-emisor">
+                    <p><span class="label">Razón Social:</span> ${razonSocial}</p>
+                    <p><span class="label">Domicilio:</span> ${domicilio}</p>
+                    <p><span class="label">CUIT:</span> ${cuit}</p>
+                    <p><span class="label">Condición IVA:</span> ${condicionIVA}</p>
+                </div>
+
+                <div class="datos-factura">
+                    <div class="col">
+                        <p><span class="label">Comprobante Nro:</span> ${nroComp}</p>
+                        <p><span class="label">Fecha:</span> ${fecha}</p>
+                        <p><span class="label">Punto de Venta:</span> ${sale.pto_vta ? String(sale.pto_vta).padStart(4, '0') : '-'}</p>
+                    </div>
+                    <div class="col" style="text-align: right;">
+                        <p><span class="label">Cliente:</span> ${sale.client_name || 'Consumidor Final'}</p>
+                        <p><span class="label">Medio Pago:</span> ${sale.payment_method || '-'}</p>
+                    </div>
+                </div>
+
+                ${sale.items && sale.items.length > 0 ? `
+                <table class="items-table">
+                    <thead>
+                        <tr>
+                            <th>Cant</th>
+                            <th>Descripción</th>
+                            <th style="text-align: right;">Precio</th>
+                            <th style="text-align: right;">Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${sale.items.map(item => `
+                            <tr>
+                                <td>${item.quantity}</td>
+                                <td>${item.name || item.product_name || '-'}</td>
+                                <td style="text-align: right;">$ ${formatMonto(item.price_at_sale || item.price || 0)}</td>
+                                <td style="text-align: right;">$ ${formatMonto((item.price_at_sale || item.price || 0) * item.quantity)}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+                ` : ''}
+
+                <div class="totales">
+                    <div class="row">
+                        <span class="label">Neto Gravado:</span>
+                        <span>$ ${formatMonto(neto)}</span>
+                    </div>
+                    <div class="row">
+                        <span class="label">IVA 10,5%:</span>
+                        <span>$ ${formatMonto(iva)}</span>
+                    </div>
+                    ${sale.discount && Number(sale.discount) > 0 ? `
+                    <div class="row">
+                        <span class="label">Descuento${sale.discount_percent ? ` (${sale.discount_percent}%)` : ''}:</span>
+                        <span>-$ ${formatMonto(sale.discount)}</span>
+                    </div>
+                    ` : ''}
+                    <div class="row total-final">
+                        <span>TOTAL:</span>
+                        <span>$ ${formatMonto(total)}</span>
+                    </div>
+                </div>
+
+                ${sale.cae ? `
+                <div class="cae-section">
+                    <p><span class="label">CAE Nro:</span> <span class="cae-number">${sale.cae}</span></p>
+                    <p><span class="label">Vto CAE:</span> ${formatVtoCAE(sale.cae_expiration)}</p>
+                    <p style="margin-top: 4px;">
+                        <span class="status-badge ${sale.invoice_status === 'APPROVED' ? 'status-approved' : 'status-error'}">
+                            ${sale.invoice_status === 'APPROVED' ? '✓ APROBADA' : '✗ ERROR'}
+                        </span>
+                    </p>
+                </div>
+                ` : ''}
+
+                <div class="footer">
+                    <p>Comprobante generado electrónicamente</p>
+                </div>
+            </body>
+            </html>`;
+
+            ventana.document.write(contenido);
+            ventana.document.close();
+            ventana.focus();
+            setTimeout(() => ventana.print(), 300);
+
         } catch (error) {
             console.error("Error fetching sale details", error);
             alert("Error al cargar detalles de la venta");
@@ -147,13 +285,6 @@ const Sales = () => {
                 {sales.length === 0 && !loading && (
                     <div className="p-8 text-center text-secondary">No hay ventas registradas.</div>
                 )}
-            </div>
-
-            {/* Hidden Ticket for Printing */}
-            <div style={{ display: 'none' }}>
-                <div className="printable-area" ref={componentRef}>
-                     {saleToPrint && <Ticket sale={saleToPrint} />}
-                </div>
             </div>
         </div>
     );
