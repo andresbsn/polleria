@@ -28,16 +28,16 @@ app.get('/', (req, res) => {
 });
 
 // Mount Routes
-app.use('/products', productRoutes);
-app.use('/sales', salesRoutes);
-app.use('/auth', authRoutes);
-app.use('/clients', require('./routes/clientRoutes'));
-app.use('/audit', auditRoutes);
-app.use('/reports', reportsRoutes);
-app.use('/categories', categoryRoutes);
-app.use('/admin', adminUserRoutes);
-app.use('/cash', cashRoutes);
-app.use('/facturacion', facturacionRoutes);
+app.use('/api/products', productRoutes);
+app.use('/api/sales', salesRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/clients', require('./routes/clientRoutes'));
+app.use('/api/audit', auditRoutes);
+app.use('/api/reports', reportsRoutes);
+app.use('/api/categories', categoryRoutes);
+app.use('/api/admin', adminUserRoutes);
+app.use('/api/cash', cashRoutes);
+app.use('/api/facturacion', facturacionRoutes);
 
 // Error Handling
 app.use((err, req, res, next) => {
