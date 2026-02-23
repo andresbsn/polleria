@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Card, CardContent, Box, Paper, TextField, Divider, LinearProgress, Chip, Alert } from '@mui/material';
+import { Card, CardContent, Box, Paper, TextField, Divider, LinearProgress, Chip, Alert, Checkbox, FormControlLabel, Select, MenuItem, InputLabel, FormControl } from '@mui/material';
 import Button from '@mui/material/Button';
 import Grid from '@mui/material/Grid';
 import Typography from '@mui/material/Typography';
@@ -49,9 +49,31 @@ const Facturacion = () => {
   const [resultados, setResultados] = useState([]);
   const [mensajeResultado, setMensajeResultado] = useState(null);
 
+  // Estados para cliente particular
+  const [clients, setClients] = useState([]);
+  const [esClienteParticular, setEsClienteParticular] = useState(false);
+  const [selectedClientId, setSelectedClientId] = useState('');
+
   useEffect(() => {
     cargarHistorial();
+    cargarClientes();
   }, []);
+
+  const cargarClientes = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/api/clients`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setClients(data || []);
+      }
+    } catch (error) {
+      console.error('Error al cargar clientes:', error);
+    }
+  };
 
   useEffect(() => {
     filtrarHistorial();
@@ -109,11 +131,17 @@ const Facturacion = () => {
 
       montoRestante -= montoTicket;
       
+      let clienteNombre = 'Consumidor Final';
+      if (esClienteParticular && selectedClientId) {
+        const c = clients.find(cl => cl.id === selectedClientId);
+        if (c) clienteNombre = c.name;
+      }
+      
       ticketsGenerados.push({
         id: i + 1,
         monto: montoTicket,
         tipo: Math.random() < 0.5 ? 'Pollo' : 'Cerdo',
-        cliente: 'Consumidor Final'
+        cliente: clienteNombre
       });
     }
 
@@ -131,13 +159,20 @@ const Facturacion = () => {
     setMensajeResultado(null);
 
     try {
+      const client = esClienteParticular && selectedClientId ? clients.find(c => c.id === selectedClientId) : null;
+      
       const response = await fetch(`${API_BASE}/api/facturacion/generar`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
-        body: JSON.stringify({ tickets })
+        body: JSON.stringify({ 
+          tickets,
+          docTipo: client ? (client.tax_type === 'CUIT' ? 80 : 96) : 99,
+          docNro: client ? client.tax_id : 0,
+          cbteTipo: client && client.tax_type === 'CUIT' ? 6 : 6 // Por ahora mantenemos Factura B (6), o podríamos poner lógica de A
+        })
       });
 
       if (!response.ok) {
@@ -433,7 +468,45 @@ const Facturacion = () => {
               />
             </Grid>
 
-            <Grid item xs={12} md={6} sx={{ display: 'flex', alignItems: 'flex-end' }}>
+            <Grid item xs={12}>
+              <Divider sx={{ my: 1, borderColor: '#333' }} />
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={esClienteParticular}
+                      onChange={(e) => setEsClienteParticular(e.target.checked)}
+                      sx={{ color: '#2563eb', '&.Mui-checked': { color: '#2563eb' } }}
+                    />
+                  }
+                  label={<Typography sx={{ color: '#e5e7eb' }}>Facturar a cliente particular?</Typography>}
+                />
+
+                {esClienteParticular && (
+                  <FormControl fullWidth sx={inputStyle}>
+                    <InputLabel id="select-cliente-label" sx={{ color: '#9ca3af' }}>Seleccionar Cliente</InputLabel>
+                    <Select
+                      labelId="select-cliente-label"
+                      value={selectedClientId}
+                      label="Seleccionar Cliente"
+                      onChange={(e) => setSelectedClientId(e.target.value)}
+                      sx={{
+                        '& .MuiSelect-select': { color: '#fff' },
+                        '& .MuiSvgIcon-root': { color: '#9ca3af' }
+                      }}
+                    >
+                      {clients.map((client) => (
+                        <MenuItem key={client.id} value={client.id}>
+                          {client.name} {client.tax_id ? `(${client.tax_id})` : ''}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                )}
+              </Box>
+            </Grid>
+
+            <Grid item xs={12} md={6} sx={{ display: 'flex', alignItems: 'flex-end', mt: 2 }}>
               <Button 
                 variant="contained" 
                 onClick={generarTicketsAleatorios}
