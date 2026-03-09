@@ -53,11 +53,19 @@ const Facturacion = () => {
   const [clients, setClients] = useState([]);
   const [esClienteParticular, setEsClienteParticular] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState('');
+  const [tipoComprobante, setTipoComprobante] = useState(6);
 
   useEffect(() => {
     cargarHistorial();
     cargarClientes();
   }, []);
+
+  useEffect(() => {
+    if (!esClienteParticular) {
+      setSelectedClientId('');
+      setTipoComprobante(6);
+    }
+  }, [esClienteParticular]);
 
   const cargarClientes = async () => {
     try {
@@ -150,6 +158,17 @@ const Facturacion = () => {
     setMensajeResultado(null);
   };
 
+  const handleClientChange = (clientId) => {
+    setSelectedClientId(clientId);
+    const client = clients.find((c) => c.id === clientId);
+    if (!client) return;
+    if (client.tax_type === 'CUIT') {
+      setTipoComprobante(1);
+    } else {
+      setTipoComprobante(6);
+    }
+  };
+
   const facturar = async () => {
     if (tickets.length === 0) return;
 
@@ -171,7 +190,7 @@ const Facturacion = () => {
           tickets,
           docTipo: client ? (client.tax_type === 'CUIT' ? 80 : 96) : 99,
           docNro: client ? client.tax_id : 0,
-          cbteTipo: client && client.tax_type === 'CUIT' ? 6 : 6 // Por ahora mantenemos Factura B (6), o podríamos poner lógica de A
+          cbteTipo: client ? tipoComprobante : 6
         })
       });
 
@@ -483,25 +502,47 @@ const Facturacion = () => {
                 />
 
                 {esClienteParticular && (
-                  <FormControl fullWidth sx={inputStyle}>
-                    <InputLabel id="select-cliente-label" sx={{ color: '#9ca3af' }}>Seleccionar Cliente</InputLabel>
-                    <Select
-                      labelId="select-cliente-label"
-                      value={selectedClientId}
-                      label="Seleccionar Cliente"
-                      onChange={(e) => setSelectedClientId(e.target.value)}
-                      sx={{
-                        '& .MuiSelect-select': { color: '#fff' },
-                        '& .MuiSvgIcon-root': { color: '#9ca3af' }
-                      }}
-                    >
-                      {clients.map((client) => (
-                        <MenuItem key={client.id} value={client.id}>
-                          {client.name} {client.tax_id ? `(${client.tax_id})` : ''}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <FormControl fullWidth sx={inputStyle}>
+                      <InputLabel id="select-cliente-label" sx={{ color: '#9ca3af' }}>Seleccionar Cliente</InputLabel>
+                      <Select
+                        labelId="select-cliente-label"
+                        value={selectedClientId}
+                        label="Seleccionar Cliente"
+                        onChange={(e) => handleClientChange(e.target.value)}
+                        sx={{
+                          '& .MuiSelect-select': { color: '#fff' },
+                          '& .MuiSvgIcon-root': { color: '#9ca3af' }
+                        }}
+                      >
+                        {clients.map((client) => (
+                          <MenuItem key={client.id} value={client.id}>
+                            {client.name} {client.tax_id ? `(${client.tax_id})` : ''}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+
+                    {selectedClientId && (
+                      <FormControl fullWidth sx={inputStyle}>
+                        <InputLabel id="select-comprobante-label" sx={{ color: '#9ca3af' }}>Tipo de comprobante</InputLabel>
+                        <Select
+                          labelId="select-comprobante-label"
+                          value={tipoComprobante}
+                          label="Tipo de comprobante"
+                          onChange={(e) => setTipoComprobante(e.target.value)}
+                          sx={{
+                            '& .MuiSelect-select': { color: '#fff' },
+                            '& .MuiSvgIcon-root': { color: '#9ca3af' }
+                          }}
+                        >
+                          <MenuItem value={1}>Factura A</MenuItem>
+                          <MenuItem value={6}>Factura B</MenuItem>
+                          <MenuItem value={11}>Factura C</MenuItem>
+                        </Select>
+                      </FormControl>
+                    )}
+                  </Box>
                 )}
               </Box>
             </Grid>
