@@ -3,6 +3,9 @@ import React, { forwardRef } from 'react';
 const Ticket = forwardRef(({ sale }, ref) => {
     if (!sale) return null;
 
+    const envPaperWidth = String(import.meta.env.VITE_THERMAL_PAPER_WIDTH || '58');
+    const thermalPaperWidth = envPaperWidth === '80' ? '80' : '58';
+
     const { 
         id, created_at, client_name, items, total, payment_method, subtotal, discount, discount_percent,
         cae, cbte_nro, pto_vta, cbte_tipo, cae_expiration, invoice_status 
@@ -19,12 +22,12 @@ const Ticket = forwardRef(({ sale }, ref) => {
 
     return (
         <div ref={ref} className="ticket-container" style={{ 
-            width: '80mm', 
-            padding: '10px', 
+            width: `${thermalPaperWidth}mm`, 
+            padding: '2mm', 
             background: 'white', 
             color: 'black', 
             fontFamily: 'monospace',
-            fontSize: '12px'
+            fontSize: thermalPaperWidth === '80' ? '12px' : '11px'
         }}>
             <div style={{ textAlign: 'center', marginBottom: '10px' }}>
                 <h3 style={{ margin: 0, fontWeight: 'bold', fontSize: '16px' }}>{businessName}</h3>

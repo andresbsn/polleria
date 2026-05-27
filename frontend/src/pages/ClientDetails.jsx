@@ -1,17 +1,23 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { getClientById, registerClientPayment } from '../services/api';
+import { getClientById, registerClientPayment, updateClient } from '../services/api';
 import { useParams, useNavigate } from 'react-router-dom';
-import { FaArrowLeft, FaMoneyBillWave, FaHistory, FaTimes } from 'react-icons/fa';
+import { FaArrowLeft, FaMoneyBillWave, FaHistory, FaTimes, FaEdit } from 'react-icons/fa';
 
 const ClientDetails = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const [client, setClient] = useState(null);
     const [loading, setLoading] = useState(true);
+    const role = localStorage.getItem('role');
+    const isAdmin = role === 'admin' || role === 'superadmin';
     
     // Payment Modal
     const [showPayModal, setShowPayModal] = useState(false);
     const [payment, setPayment] = useState({ amount: '', method: 'Efectivo', notes: '' });
+
+    // Edit Client Modal
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [editClient, setEditClient] = useState({ name: '', phone: '', address: '', tax_id: '', tax_type: 'DNI', email: '' });
 
     // Movements filters
     const [movType, setMovType] = useState('ALL');
@@ -26,6 +32,14 @@ const ClientDetails = () => {
         try {
             const { data } = await getClientById(id);
             setClient(data);
+            setEditClient({
+                name: data.name || '',
+                phone: data.phone || '',
+                address: data.address || '',
+                tax_id: data.tax_id || '',
+                tax_type: data.tax_type || 'DNI',
+                email: data.email || ''
+            });
         } catch (error) {
             console.error(error);
             alert("Error cargando cliente");
@@ -48,6 +62,17 @@ const ClientDetails = () => {
             loadClient(); // Refresh
         } catch (error) {
             alert(error.message);
+        }
+    };
+
+    const handleEditSubmit = async (e) => {
+        e.preventDefault();
+        try {
+            await updateClient(id, editClient);
+            setShowEditModal(false);
+            loadClient();
+        } catch (error) {
+            alert(error.response?.data?.error || error.message);
         }
     };
 
@@ -81,7 +106,14 @@ const ClientDetails = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                 {/* Info Card */}
                 <div className="glass-panel p-6 col-span-2">
-                    <h1 className="text-3xl font-bold mb-4">{client.name}</h1>
+                    <div className="flex-between mb-4">
+                        <h1 className="text-3xl font-bold">{client.name}</h1>
+                        {isAdmin && (
+                            <button className="secondary-btn flex-center gap-2" onClick={() => setShowEditModal(true)}>
+                                <FaEdit /> Editar
+                            </button>
+                        )}
+                    </div>
                     <div className="grid grid-cols-2 gap-4">
                         <p><span className="text-secondary">DNI/CUIT:</span> {client.tax_id || '-'}</p>
                         <p><span className="text-secondary">Teléfono:</span> {client.phone || '-'}</p>
@@ -315,6 +347,77 @@ const ClientDetails = () => {
                                     <button type="button" className="secondary-btn" style={{ minWidth: '160px' }} onClick={() => setShowPayModal(false)}>Cancelar</button>
                                     <button type="submit" className="primary-btn" style={{ minWidth: '160px' }}>Confirmar</button>
                                 </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {showEditModal && (
+                <div className="fixed inset-0 bg-black/80 flex-center z-50" onMouseDown={() => setShowEditModal(false)}>
+                    <div
+                        className="glass-panel p-6 animate-fade-in"
+                        style={{ width: 'min(560px, calc(100vw - 24px))' }}
+                        onMouseDown={(e) => e.stopPropagation()}
+                    >
+                        <div className="flex-between mb-4">
+                            <h2 className="text-xl font-bold">Editar Cliente</h2>
+                            <button
+                                type="button"
+                                className="secondary-btn flex-center"
+                                style={{ padding: '0.55rem 0.75rem' }}
+                                onClick={() => setShowEditModal(false)}
+                            >
+                                <FaTimes />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleEditSubmit} className="flex flex-col gap-4">
+                            <input
+                                placeholder="Nombre Completo *"
+                                value={editClient.name}
+                                onChange={e => setEditClient({ ...editClient, name: e.target.value })}
+                                required
+                                className="input-field"
+                            />
+                            <div className="flex gap-2">
+                                <select
+                                    className="input-field w-24"
+                                    value={editClient.tax_type}
+                                    onChange={e => setEditClient({ ...editClient, tax_type: e.target.value })}
+                                >
+                                    <option>DNI</option>
+                                    <option>CUIT</option>
+                                    <option>CUIL</option>
+                                </select>
+                                <input
+                                    placeholder="Número Documento"
+                                    value={editClient.tax_id}
+                                    onChange={e => setEditClient({ ...editClient, tax_id: e.target.value })}
+                                    className="input-field flex-1"
+                                />
+                            </div>
+                            <input
+                                placeholder="Teléfono"
+                                value={editClient.phone}
+                                onChange={e => setEditClient({ ...editClient, phone: e.target.value })}
+                                className="input-field"
+                            />
+                            <input
+                                placeholder="Dirección"
+                                value={editClient.address}
+                                onChange={e => setEditClient({ ...editClient, address: e.target.value })}
+                                className="input-field"
+                            />
+                            <input
+                                placeholder="Email"
+                                value={editClient.email}
+                                onChange={e => setEditClient({ ...editClient, email: e.target.value })}
+                                className="input-field"
+                            />
+                            <div className="flex gap-4 mt-2">
+                                <button type="button" className="secondary-btn flex-1" onClick={() => setShowEditModal(false)}>Cancelar</button>
+                                <button type="submit" className="primary-btn flex-1">Guardar</button>
                             </div>
                         </form>
                     </div>

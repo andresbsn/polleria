@@ -10,6 +10,31 @@ exports.getClients = async (req, res) => {
     }
 };
 
+// Update Client
+exports.updateClient = async (req, res) => {
+    const { id } = req.params;
+    const { name, tax_id, tax_type, address, phone, email } = req.body;
+    try {
+        const result = await db.query(
+            `UPDATE clients
+             SET name = COALESCE($1, name),
+                 tax_id = COALESCE($2, tax_id),
+                 tax_type = COALESCE($3, tax_type),
+                 address = COALESCE($4, address),
+                 phone = COALESCE($5, phone),
+                 email = COALESCE($6, email)
+             WHERE id = $7
+             RETURNING *`,
+            [name, tax_id, tax_type, address, phone, email, id]
+        );
+
+        if (result.rows.length === 0) return res.status(404).json({ error: 'Client not found' });
+        res.json(result.rows[0]);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+};
+
 // Create Client
 exports.createClient = async (req, res) => {
     const { name, tax_id, tax_type, address, phone, email } = req.body;

@@ -82,6 +82,25 @@ Para pasar a producción:
    - Si se deja CUIT vacío: Consumidor Final (Factura B < Monto Limite).
    - Si se ingresa CUIT: Intenta Factura A/B según condición fiscal (Simplificado).
 
+## Impresora Térmica (Gadnic IT1050)
+
+El ticket del POS se imprime con `window.print()` y está optimizado para papel térmico.
+
+1. Configurar en `frontend/.env`:
+```env
+VITE_THERMAL_PAPER_WIDTH=58
+```
+
+Valores soportados:
+- `58` (recomendado para Gadnic IT1050)
+- `80`
+
+2. En Windows, dejar la `Gadnic IT1050` como impresora predeterminada o seleccionarla en el diálogo de impresión del navegador.
+3. En el diálogo de impresión, usar:
+   - Escala: `100%` (sin ajustar)
+   - Márgenes: `Ninguno`
+   - Tamaño de papel: `58 mm` (o `80 mm` si corresponde)
+
 ## Solución de Problemas
 - **Error "Certificates not found"**: El sistema usará un Mock y no emitirá facturas reales.
 - **Error de Conexión AFIP**: Revisar firewall y validez del certificado (duran 2 años).

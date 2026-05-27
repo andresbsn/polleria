@@ -241,11 +241,24 @@ const POS = () => {
     const categories = [{ id: 'All', name: 'All' }, ...productCategories.map(c => ({ id: String(c.id), name: c.name }))];
 
     const componentRef = React.useRef();
+    const envPaperWidth = String(import.meta.env.VITE_THERMAL_PAPER_WIDTH || '58');
+    const thermalPaperWidth = envPaperWidth === '80' ? '80' : '58';
 
     const handlePrint = () => {
         // Create a printable area manually if not using a library
         const content = componentRef.current;
         if (!content) return;
+
+        const styleId = 'thermal-print-page-size';
+        let styleTag = document.getElementById(styleId);
+
+        if (!styleTag) {
+            styleTag = document.createElement('style');
+            styleTag.id = styleId;
+            document.head.appendChild(styleTag);
+        }
+
+        styleTag.textContent = `@media print { @page { size: ${thermalPaperWidth}mm auto; margin: 0; } html, body { width: ${thermalPaperWidth}mm !important; margin: 0 !important; padding: 0 !important; } }`;
         
         // Simple window print trick: 
         // We moved css logic to @media print to hide everything but .printable-area
