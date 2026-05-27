@@ -42,6 +42,25 @@ const escapearHtml = (valor) => String(valor || '')
   .replace(/"/g, '&quot;')
   .replace(/'/g, '&#39;');
 
+const obtenerDetalleFallback = (...candidatos) => {
+  for (const candidato of candidatos) {
+    if (typeof candidato === 'string' && candidato.trim()) {
+      return candidato.trim();
+    }
+  }
+  return null;
+};
+
+const obtenerItemsValidos = (items) => {
+  if (!Array.isArray(items)) return [];
+  return items.filter((item) => {
+    const descripcion = (item?.product_name || item?.name || '').trim();
+    const cantidad = Number(item?.quantity ?? 0);
+    const precio = Number(item?.price_at_sale ?? item?.price ?? 0);
+    return Boolean(descripcion) || cantidad > 0 || precio > 0;
+  });
+};
+
 const Facturacion = () => {
   const hoy = new Date().toISOString().split('T')[0];
   const [montoTotalRaw, setMontoTotalRaw] = useState('');
@@ -282,8 +301,15 @@ const Facturacion = () => {
     const neto = (factura.monto / 1.105).toFixed(2);
     const iva = (factura.monto - factura.monto / 1.105).toFixed(2);
 
-    const items = Array.isArray(ventaDetalle?.items) ? ventaDetalle.items : [];
-    const detalleFallback = factura.tipo || ventaDetalle?.tipo || null;
+    const items = obtenerItemsValidos(ventaDetalle?.items);
+    const detalleFallback = obtenerDetalleFallback(
+      factura.tipo,
+      factura.sale_detail_type,
+      factura.details?.tipo,
+      ventaDetalle?.tipo,
+      ventaDetalle?.sale_detail_type,
+      ventaDetalle?.details?.tipo
+    );
 
     const detalleHtml = items.length > 0
       ? `
@@ -497,8 +523,15 @@ const Facturacion = () => {
     const subtotal = Number(ventaDetalle?.subtotal ?? factura.monto ?? 0);
     const descuento = Number(ventaDetalle?.discount || 0);
     const total = Number(factura.monto ?? ventaDetalle?.total ?? 0);
-    const items = Array.isArray(ventaDetalle?.items) ? ventaDetalle.items : [];
-    const detalleFallback = factura.tipo || ventaDetalle?.tipo || null;
+    const items = obtenerItemsValidos(ventaDetalle?.items);
+    const detalleFallback = obtenerDetalleFallback(
+      factura.tipo,
+      factura.sale_detail_type,
+      factura.details?.tipo,
+      ventaDetalle?.tipo,
+      ventaDetalle?.sale_detail_type,
+      ventaDetalle?.details?.tipo
+    );
 
     const numeroComprobante = factura.numeroFactura
       || (factura.ptoVta && factura.cbteNro

@@ -9,6 +9,25 @@ const escapearHtml = (valor) => String(valor || '')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 
+const obtenerDetalleFallback = (...candidatos) => {
+    for (const candidato of candidatos) {
+        if (typeof candidato === 'string' && candidato.trim()) {
+            return candidato.trim();
+        }
+    }
+    return null;
+};
+
+const obtenerItemsValidos = (items) => {
+    if (!Array.isArray(items)) return [];
+    return items.filter((item) => {
+        const descripcion = (item?.name || item?.product_name || '').trim();
+        const cantidad = Number(item?.quantity ?? 0);
+        const precio = Number(item?.price_at_sale ?? item?.price ?? 0);
+        return Boolean(descripcion) || cantidad > 0 || precio > 0;
+    });
+};
+
 const Sales = () => {
     const [sales, setSales] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -80,7 +99,12 @@ const Sales = () => {
                 return new Date(vto).toLocaleDateString('es-AR');
             };
 
-            const detalleFallback = sale.tipo || null;
+            const detalleFallback = obtenerDetalleFallback(
+                sale.tipo,
+                sale.sale_detail_type,
+                sale.details?.tipo
+            );
+            const itemsValidos = obtenerItemsValidos(sale.items);
 
             const contenido = `
             <html>
@@ -137,7 +161,7 @@ const Sales = () => {
                     </div>
                 </div>
 
-                ${sale.items && sale.items.length > 0 ? `
+                ${itemsValidos.length > 0 ? `
                 <table class="items-table">
                     <thead>
                         <tr>
@@ -148,7 +172,7 @@ const Sales = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        ${sale.items.map(item => `
+                        ${itemsValidos.map(item => `
                             <tr>
                                 <td>${item.quantity}</td>
                                 <td>${item.name || item.product_name || '-'}</td>
@@ -267,10 +291,15 @@ const Sales = () => {
                 ? `${String(sale.pto_vta).padStart(4, '0')}-${String(sale.cbte_nro).padStart(8, '0')}`
                 : '-';
             const tipoComp = sale.cbte_tipo === 1 ? 'Factura A' : sale.cbte_tipo === 6 ? 'Factura B' : sale.cbte_tipo === 11 ? 'Factura C' : 'Comprobante';
-            const detalleFallback = sale.tipo || null;
+            const detalleFallback = obtenerDetalleFallback(
+                sale.tipo,
+                sale.sale_detail_type,
+                sale.details?.tipo
+            );
+            const itemsValidos = obtenerItemsValidos(sale.items);
 
-            const itemsHtml = Array.isArray(sale.items) && sale.items.length > 0
-                ? sale.items.map((item) => {
+            const itemsHtml = itemsValidos.length > 0
+                ? itemsValidos.map((item) => {
                     const cantidad = Number(item.quantity || 0);
                     const precio = Number(item.price_at_sale || item.price || 0);
                     const totalItem = cantidad * precio;
