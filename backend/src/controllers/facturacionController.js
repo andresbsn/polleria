@@ -169,9 +169,17 @@ const obtenerHistorial = async (req, res) => {
                 s.payment_method,
                 s.subtotal,
                 s.discount,
-                s.discount_percent
+                s.discount_percent,
+                al.sale_detail_type
             FROM invoices i
             LEFT JOIN sales s ON i.sale_id = s.id
+            LEFT JOIN LATERAL (
+                SELECT details->>'tipo' AS sale_detail_type
+                FROM audit_logs a
+                WHERE a.action = 'CREATE_SALE_FACTURACION' AND a.entity_id = i.sale_id
+                ORDER BY a.created_at DESC
+                LIMIT 1
+            ) al ON true
         `;
 
         const params = [];
@@ -220,6 +228,7 @@ const obtenerHistorial = async (req, res) => {
             afipError: row.afip_error,
             cliente: row.client_name || 'Consumidor Final',
             medioPago: row.payment_method,
+            tipo: row.sale_detail_type || null,
             fecha: row.created_at
         }));
 
@@ -249,9 +258,17 @@ const obtenerFactura = async (req, res) => {
                 s.payment_method,
                 s.subtotal,
                 s.discount,
-                s.discount_percent
+                s.discount_percent,
+                al.sale_detail_type
             FROM invoices i
             LEFT JOIN sales s ON i.sale_id = s.id
+            LEFT JOIN LATERAL (
+                SELECT details->>'tipo' AS sale_detail_type
+                FROM audit_logs a
+                WHERE a.action = 'CREATE_SALE_FACTURACION' AND a.entity_id = i.sale_id
+                ORDER BY a.created_at DESC
+                LIMIT 1
+            ) al ON true
             WHERE i.id = $1
         `, [id]);
 
@@ -298,6 +315,7 @@ const obtenerFactura = async (req, res) => {
                 cliente: row.client_name || 'Consumidor Final',
                 medioPago: row.payment_method,
                 fecha: row.created_at,
+                tipo: row.sale_detail_type || null,
                 items
             }
         });

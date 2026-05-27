@@ -263,7 +263,9 @@ const Facturacion = () => {
     setMontoTotalRaw(valorNormalizado);
   };
 
-  const reimprimirFactura = (factura) => {
+  const reimprimirFactura = async (factura) => {
+    const ventaDetalle = await obtenerVentaDetalle(factura.saleId);
+
     const ventana = window.open('', '_blank', 'width=600,height=900');
 
     if (!ventana) {
@@ -279,6 +281,60 @@ const Facturacion = () => {
 
     const neto = (factura.monto / 1.105).toFixed(2);
     const iva = (factura.monto - factura.monto / 1.105).toFixed(2);
+
+    const items = Array.isArray(ventaDetalle?.items) ? ventaDetalle.items : [];
+    const detalleFallback = factura.tipo || ventaDetalle?.tipo || null;
+
+    const detalleHtml = items.length > 0
+      ? `
+        <table class="items-table">
+          <thead>
+            <tr>
+              <th>Cant</th>
+              <th>Descripción</th>
+              <th style="text-align: right;">Precio</th>
+              <th style="text-align: right;">Subtotal</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${items.map((item) => {
+              const cantidad = Number(item.quantity || 0);
+              const precio = Number(item.price_at_sale ?? item.price ?? 0);
+              const subtotalItem = cantidad * precio;
+              return `
+                <tr>
+                  <td>${cantidad % 1 === 0 ? cantidad : cantidad.toFixed(2)}</td>
+                  <td>${escapearHtml(item.product_name || item.name || 'Producto')}</td>
+                  <td style="text-align: right;">$ ${formatearMonto(precio)}</td>
+                  <td style="text-align: right;">$ ${formatearMonto(subtotalItem)}</td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      `
+      : detalleFallback
+        ? `
+          <table class="items-table">
+            <thead>
+              <tr>
+                <th>Cant</th>
+                <th>Descripción</th>
+                <th style="text-align: right;">Precio</th>
+                <th style="text-align: right;">Subtotal</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>1</td>
+                <td>${escapearHtml(detalleFallback)}</td>
+                <td style="text-align: right;">$ ${formatearMonto(factura.monto)}</td>
+                <td style="text-align: right;">$ ${formatearMonto(factura.monto)}</td>
+              </tr>
+            </tbody>
+          </table>
+        `
+        : '';
 
     const contenido = `
       <html>
@@ -309,6 +365,9 @@ const Facturacion = () => {
             .datos-factura .col { flex: 1; }
             .row { margin: 4px 0; display: flex; justify-content: space-between; }
             .label { font-weight: bold; }
+            .items-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+            .items-table th, .items-table td { padding: 4px 8px; text-align: left; border-bottom: 1px solid #eee; }
+            .items-table th { border-bottom: 2px solid #333; }
             .totales { border-top: 2px solid #333; margin-top: 12px; padding-top: 8px; }
             .total-final { font-size: 16px; font-weight: bold; margin-top: 8px; }
             .cae-section { 
@@ -357,6 +416,8 @@ const Facturacion = () => {
               <p><span class="label">Nro Doc:</span> ${factura.docNro || '-'}</p>
             </div>
           </div>
+
+          ${detalleHtml}
 
           <div class="totales">
             <div class="row">
@@ -437,6 +498,7 @@ const Facturacion = () => {
     const descuento = Number(ventaDetalle?.discount || 0);
     const total = Number(factura.monto ?? ventaDetalle?.total ?? 0);
     const items = Array.isArray(ventaDetalle?.items) ? ventaDetalle.items : [];
+    const detalleFallback = factura.tipo || ventaDetalle?.tipo || null;
 
     const numeroComprobante = factura.numeroFactura
       || (factura.ptoVta && factura.cbteNro
@@ -459,11 +521,19 @@ const Facturacion = () => {
           </tr>
         `;
       }).join('')
-      : `
-        <tr>
-          <td colspan="3" style="text-align:center;">Detalle de items no disponible</td>
-        </tr>
-      `;
+      : detalleFallback
+        ? `
+          <tr>
+            <td>1</td>
+            <td>${escapearHtml(detalleFallback)}</td>
+            <td style="text-align:right;">$ ${formatearMonto(total)}</td>
+          </tr>
+        `
+        : `
+          <tr>
+            <td colspan="3" style="text-align:center;">Detalle de items no disponible</td>
+          </tr>
+        `;
 
     const contenido = `
       <html>

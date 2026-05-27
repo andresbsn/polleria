@@ -80,6 +80,8 @@ const Sales = () => {
                 return new Date(vto).toLocaleDateString('es-AR');
             };
 
+            const detalleFallback = sale.tipo || null;
+
             const contenido = `
             <html>
             <head>
@@ -154,6 +156,25 @@ const Sales = () => {
                                 <td style="text-align: right;">$ ${formatMonto((item.price_at_sale || item.price || 0) * item.quantity)}</td>
                             </tr>
                         `).join('')}
+                    </tbody>
+                </table>
+                ` : detalleFallback ? `
+                <table class="items-table">
+                    <thead>
+                        <tr>
+                            <th>Cant</th>
+                            <th>Descripción</th>
+                            <th style="text-align: right;">Precio</th>
+                            <th style="text-align: right;">Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>1</td>
+                            <td>${escapearHtml(detalleFallback)}</td>
+                            <td style="text-align: right;">$ ${formatMonto(total)}</td>
+                            <td style="text-align: right;">$ ${formatMonto(total)}</td>
+                        </tr>
                     </tbody>
                 </table>
                 ` : ''}
@@ -246,6 +267,7 @@ const Sales = () => {
                 ? `${String(sale.pto_vta).padStart(4, '0')}-${String(sale.cbte_nro).padStart(8, '0')}`
                 : '-';
             const tipoComp = sale.cbte_tipo === 1 ? 'Factura A' : sale.cbte_tipo === 6 ? 'Factura B' : sale.cbte_tipo === 11 ? 'Factura C' : 'Comprobante';
+            const detalleFallback = sale.tipo || null;
 
             const itemsHtml = Array.isArray(sale.items) && sale.items.length > 0
                 ? sale.items.map((item) => {
@@ -260,11 +282,19 @@ const Sales = () => {
                         </tr>
                     `;
                 }).join('')
-                : `
-                    <tr>
-                        <td colspan="3" style="text-align:center;">Detalle de items no disponible</td>
-                    </tr>
-                `;
+                : detalleFallback
+                    ? `
+                        <tr>
+                            <td>1</td>
+                            <td>${escapearHtml(detalleFallback)}</td>
+                            <td style="text-align:right;">$ ${formatMonto(total)}</td>
+                        </tr>
+                    `
+                    : `
+                        <tr>
+                            <td colspan="3" style="text-align:center;">Detalle de items no disponible</td>
+                        </tr>
+                    `;
 
             const contenido = `
             <html>

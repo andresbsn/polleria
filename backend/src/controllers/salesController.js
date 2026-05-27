@@ -243,9 +243,16 @@ exports.getSaleById = async (req, res) => {
     const { id } = req.params;
     try {
         const saleRes = await db.query(`
-            SELECT s.*, i.cae, i.status as invoice_status, i.cbte_nro, i.pto_vta, i.cbte_tipo, i.cae_expiration
+            SELECT s.*, i.cae, i.status as invoice_status, i.cbte_nro, i.pto_vta, i.cbte_tipo, i.cae_expiration, al.sale_detail_type
             FROM sales s 
             LEFT JOIN invoices i ON s.id = i.sale_id 
+            LEFT JOIN LATERAL (
+                SELECT details->>'tipo' AS sale_detail_type
+                FROM audit_logs a
+                WHERE a.action = 'CREATE_SALE_FACTURACION' AND a.entity_id = s.id
+                ORDER BY a.created_at DESC
+                LIMIT 1
+            ) al ON true
             WHERE s.id = $1
         `, [id]);
 
@@ -259,6 +266,8 @@ exports.getSaleById = async (req, res) => {
         `, [id]);
 
         const sale = saleRes.rows[0];
+        sale.tipo = sale.sale_detail_type || null;
+        delete sale.sale_detail_type;
         sale.items = itemsRes.rows;
 
         res.json(sale);
