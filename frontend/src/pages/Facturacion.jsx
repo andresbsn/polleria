@@ -550,7 +550,7 @@ const Facturacion = () => {
           <tr>
             <td>${cantidad % 1 === 0 ? cantidad : cantidad.toFixed(2)}</td>
             <td>${escapearHtml(item.product_name || item.name || 'Producto')}</td>
-            <td style="text-align:right;">$ ${formatearMonto(totalItem)}</td>
+            <td style="text-align:right; padding-right:2mm; white-space:nowrap;">$ ${formatearMonto(totalItem)}</td>
           </tr>
         `;
       }).join('')
@@ -559,7 +559,7 @@ const Facturacion = () => {
           <tr>
             <td>1</td>
             <td>${escapearHtml(detalleFallback)}</td>
-            <td style="text-align:right;">$ ${formatearMonto(total)}</td>
+            <td style="text-align:right; padding-right:2mm; white-space:nowrap;">$ ${formatearMonto(total)}</td>
           </tr>
         `
         : `
@@ -588,10 +588,15 @@ const Facturacion = () => {
             .center { text-align: center; }
             .line { border-top: 1px dashed #000; margin: 6px 0; }
             p { margin: 0; }
-            table { width: 100%; border-collapse: collapse; }
+            table { width: 100%; border-collapse: collapse; table-layout: fixed; }
             th, td { padding: 2px 0; vertical-align: top; }
             th { text-align: left; }
+            th.col-cant, td.col-cant { width: 14%; }
+            th.col-desc, td.col-desc { width: 46%; }
+            th.col-total, td.col-total { width: 40%; }
+            th.col-total, td.col-total { text-align: right; padding-right: 2mm; white-space: nowrap; }
             .row { display: flex; justify-content: space-between; gap: 8px; }
+            .row .amount { white-space: nowrap; padding-right: 2mm; }
             .total { font-weight: bold; font-size: ${thermalPaperWidth === '80' ? '14px' : '13px'}; }
           </style>
         </head>
@@ -616,9 +621,9 @@ const Facturacion = () => {
             <table>
               <thead>
                 <tr>
-                  <th>Cant</th>
-                  <th>Desc</th>
-                  <th style="text-align:right;">Total</th>
+                  <th class="col-cant">Cant</th>
+                  <th class="col-desc">Desc</th>
+                  <th class="col-total">Total</th>
                 </tr>
               </thead>
               <tbody>
@@ -628,9 +633,9 @@ const Facturacion = () => {
 
             <div class="line"></div>
 
-            <div class="row"><span>SUBTOTAL</span><span>$ ${formatearMonto(subtotal)}</span></div>
-            ${descuento > 0 ? `<div class="row"><span>DESCUENTO</span><span>-$ ${formatearMonto(descuento)}</span></div>` : ''}
-            <div class="row total"><span>TOTAL</span><span>$ ${formatearMonto(total)}</span></div>
+            <div class="row"><span>SUBTOTAL</span><span class="amount">$ ${formatearMonto(subtotal)}</span></div>
+            ${descuento > 0 ? `<div class="row"><span>DESCUENTO</span><span class="amount">-$ ${formatearMonto(descuento)}</span></div>` : ''}
+            <div class="row total"><span>TOTAL</span><span class="amount">$ ${formatearMonto(total)}</span></div>
 
             ${factura.cae ? `
               <div class="line"></div>
