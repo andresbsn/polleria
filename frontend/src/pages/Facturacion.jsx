@@ -35,6 +35,13 @@ const formatearVencimientoCAE = (vto) => {
   return new Date(vto).toLocaleDateString('es-AR');
 };
 
+const escapearHtml = (valor) => String(valor || '')
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&#39;');
+
 const Facturacion = () => {
   const hoy = new Date().toISOString().split('T')[0];
   const [montoTotalRaw, setMontoTotalRaw] = useState('');
@@ -389,6 +396,160 @@ const Facturacion = () => {
     setTimeout(() => ventana.print(), 300);
   };
 
+  const obtenerVentaDetalle = async (saleId) => {
+    if (!saleId) return null;
+    try {
+      const response = await fetch(`${API_BASE}/api/sales/${saleId}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      if (!response.ok) return null;
+      return await response.json();
+    } catch (error) {
+      console.error('No se pudo obtener detalle de la venta para ticket:', error);
+      return null;
+    }
+  };
+
+  const imprimirTicket = async (factura) => {
+    const ventaDetalle = await obtenerVentaDetalle(factura.saleId);
+
+    const ventana = window.open('', '_blank', 'width=420,height=900');
+    if (!ventana) {
+      alert('Habilite las ventanas emergentes para imprimir el ticket.');
+      return;
+    }
+
+    const envPaperWidth = String(import.meta.env.VITE_THERMAL_PAPER_WIDTH || '58');
+    const thermalPaperWidth = envPaperWidth === '80' ? '80' : '58';
+
+    const businessName = import.meta.env.VITE_BUSINESS_NAME || import.meta.env.VITE_RAZON_SOCIAL || 'Los Nonos';
+    const businessTaxId = import.meta.env.VITE_BUSINESS_TAX_ID || import.meta.env.VITE_AFIP_CUIT || '20430562372';
+    const businessAddress = import.meta.env.VITE_BUSINESS_ADDRESS || import.meta.env.VITE_DOMICILIO_FISCAL || '';
+    const condicionIVA = import.meta.env.VITE_CONDICION_IVA || 'Responsable Inscripto';
+
+    const fechaVenta = ventaDetalle?.created_at || factura.fecha;
+    const cliente = ventaDetalle?.client_name || factura.cliente || 'Consumidor Final';
+    const medioPago = ventaDetalle?.payment_method || factura.medioPago || '-';
+    const subtotal = Number(ventaDetalle?.subtotal ?? factura.monto ?? 0);
+    const descuento = Number(ventaDetalle?.discount || 0);
+    const total = Number(factura.monto ?? ventaDetalle?.total ?? 0);
+    const items = Array.isArray(ventaDetalle?.items) ? ventaDetalle.items : [];
+
+    const numeroComprobante = factura.numeroFactura
+      || (factura.ptoVta && factura.cbteNro
+        ? `${String(factura.ptoVta).padStart(4, '0')}-${String(factura.cbteNro).padStart(8, '0')}`
+        : '-');
+
+    const tipoComprobante = factura.tipoComprobante
+      || (factura.cbteTipo === 1 ? 'Factura A' : factura.cbteTipo === 6 ? 'Factura B' : factura.cbteTipo === 11 ? 'Factura C' : 'Comprobante');
+
+    const itemsHtml = items.length > 0
+      ? items.map((item) => {
+        const cantidad = Number(item.quantity || 0);
+        const precio = Number(item.price_at_sale ?? item.price ?? 0);
+        const totalItem = precio * cantidad;
+        return `
+          <tr>
+            <td>${cantidad % 1 === 0 ? cantidad : cantidad.toFixed(2)}</td>
+            <td>${escapearHtml(item.product_name || item.name || 'Producto')}</td>
+            <td style="text-align:right;">$ ${formatearMonto(totalItem)}</td>
+          </tr>
+        `;
+      }).join('')
+      : `
+        <tr>
+          <td colspan="3" style="text-align:center;">Detalle de items no disponible</td>
+        </tr>
+      `;
+
+    const contenido = `
+      <html>
+        <head>
+          <title>Ticket ${escapearHtml(numeroComprobante)}</title>
+          <style>
+            * { box-sizing: border-box; }
+            @page { size: ${thermalPaperWidth}mm auto; margin: 0; }
+            html, body {
+              margin: 0;
+              padding: 0;
+              width: ${thermalPaperWidth}mm;
+              font-family: monospace;
+              color: #000;
+              background: #fff;
+              font-size: ${thermalPaperWidth === '80' ? '12px' : '11px'};
+            }
+            .ticket { width: ${thermalPaperWidth}mm; padding: 2mm; }
+            .center { text-align: center; }
+            .line { border-top: 1px dashed #000; margin: 6px 0; }
+            p { margin: 0; }
+            table { width: 100%; border-collapse: collapse; }
+            th, td { padding: 2px 0; vertical-align: top; }
+            th { text-align: left; }
+            .row { display: flex; justify-content: space-between; gap: 8px; }
+            .total { font-weight: bold; font-size: ${thermalPaperWidth === '80' ? '14px' : '13px'}; }
+          </style>
+        </head>
+        <body>
+          <div class="ticket">
+            <div class="center">
+              <p style="font-size:16px; font-weight:bold;">${escapearHtml(businessName)}</p>
+              ${businessAddress ? `<p>${escapearHtml(businessAddress)}</p>` : ''}
+              <p>CUIT: ${escapearHtml(businessTaxId)}</p>
+              <p>${escapearHtml(condicionIVA)}</p>
+            </div>
+
+            <div class="line"></div>
+
+            <p>Fecha: ${escapearHtml(formatearFecha(fechaVenta))}</p>
+            <p>${escapearHtml(tipoComprobante)}: ${escapearHtml(numeroComprobante)}</p>
+            <p>Cliente: ${escapearHtml(cliente)}</p>
+            <p>Pago: ${escapearHtml(medioPago)}</p>
+
+            <div class="line"></div>
+
+            <table>
+              <thead>
+                <tr>
+                  <th>Cant</th>
+                  <th>Desc</th>
+                  <th style="text-align:right;">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${itemsHtml}
+              </tbody>
+            </table>
+
+            <div class="line"></div>
+
+            <div class="row"><span>SUBTOTAL</span><span>$ ${formatearMonto(subtotal)}</span></div>
+            ${descuento > 0 ? `<div class="row"><span>DESCUENTO</span><span>-$ ${formatearMonto(descuento)}</span></div>` : ''}
+            <div class="row total"><span>TOTAL</span><span>$ ${formatearMonto(total)}</span></div>
+
+            ${factura.cae ? `
+              <div class="line"></div>
+              <div class="center">
+                <p>CAE: ${escapearHtml(factura.cae)}</p>
+                <p>Vto CAE: ${escapearHtml(formatearVencimientoCAE(factura.caeVencimiento))}</p>
+              </div>
+            ` : ''}
+
+            <div class="line"></div>
+            <p class="center">¡Gracias por su compra!</p>
+          </div>
+        </body>
+      </html>
+    `;
+
+    ventana.document.write(contenido);
+    ventana.document.close();
+    ventana.focus();
+    setTimeout(() => ventana.print(), 300);
+  };
+
   const inputStyle = {
     '& .MuiOutlinedInput-root': {
       backgroundColor: '#2d2d2d',
@@ -689,7 +850,25 @@ const Facturacion = () => {
                       )}
 
                       {resultado.status === 'APPROVED' && (
-                        <Box sx={{ mt: 1.5, display: 'flex', justifyContent: 'flex-end' }}>
+                        <Box sx={{ mt: 1.5, display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            startIcon={<FaTicketAlt size={12} />}
+                            onClick={() => imprimirTicket(resultado)}
+                            sx={{
+                              borderColor: '#2563eb',
+                              color: '#93c5fd',
+                              textTransform: 'none',
+                              fontSize: '0.75rem',
+                              '&:hover': {
+                                borderColor: '#60a5fa',
+                                background: 'rgba(37, 99, 235, 0.1)'
+                              }
+                            }}
+                          >
+                            Imprimir ticket
+                          </Button>
                           <Button
                             size="small"
                             variant="outlined"
@@ -706,7 +885,7 @@ const Facturacion = () => {
                               }
                             }}
                           >
-                            Imprimir
+                            Imprimir A4
                           </Button>
                         </Box>
                       )}
@@ -934,7 +1113,26 @@ const Facturacion = () => {
                     {factura.tipoComprobante} - {factura.cliente}
                   </Typography>
 
-                  <Box sx={{ mt: 1, display: 'flex', justifyContent: 'flex-end' }}>
+                  <Box sx={{ mt: 1, display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      startIcon={<FaTicketAlt size={10} />}
+                      onClick={() => imprimirTicket(factura)}
+                      sx={{
+                        borderColor: '#2563eb',
+                        color: '#93c5fd',
+                        textTransform: 'none',
+                        fontSize: '0.7rem',
+                        py: 0.3,
+                        '&:hover': {
+                          borderColor: '#60a5fa',
+                          background: 'rgba(37, 99, 235, 0.1)'
+                        }
+                      }}
+                    >
+                      Imprimir ticket
+                    </Button>
                     <Button
                       size="small"
                       variant="outlined"
@@ -952,7 +1150,7 @@ const Facturacion = () => {
                         }
                       }}
                     >
-                      Reimprimir
+                      Reimprimir A4
                     </Button>
                   </Box>
                 </Box>

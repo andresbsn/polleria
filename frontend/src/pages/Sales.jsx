@@ -1,6 +1,13 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { getSales, retryInvoice, getSaleById } from '../services/api';
-import { FaFileInvoice, FaCheckCircle, FaExclamationTriangle, FaRedo, FaSearch } from 'react-icons/fa';
+import { FaCheckCircle, FaExclamationTriangle, FaRedo, FaTicketAlt, FaPrint } from 'react-icons/fa';
+
+const escapearHtml = (valor) => String(valor || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 
 const Sales = () => {
     const [sales, setSales] = useState([]);
@@ -201,6 +208,152 @@ const Sales = () => {
         }
     };
 
+    const handlePrintTicket = async (saleId) => {
+        try {
+            const { data: sale } = await getSaleById(saleId);
+
+            const ventana = window.open('', '_blank', 'width=420,height=900');
+            if (!ventana) {
+                alert('Habilite las ventanas emergentes para imprimir el ticket.');
+                return;
+            }
+
+            const envPaperWidth = String(import.meta.env.VITE_THERMAL_PAPER_WIDTH || '58');
+            const thermalPaperWidth = envPaperWidth === '80' ? '80' : '58';
+
+            const businessName = import.meta.env.VITE_BUSINESS_NAME || import.meta.env.VITE_RAZON_SOCIAL || 'Los Nonos';
+            const businessTaxId = import.meta.env.VITE_BUSINESS_TAX_ID || import.meta.env.VITE_AFIP_CUIT || '20430562372';
+            const businessAddress = import.meta.env.VITE_BUSINESS_ADDRESS || import.meta.env.VITE_DOMICILIO_FISCAL || '';
+            const condicionIVA = import.meta.env.VITE_CONDICION_IVA || 'Responsable Inscripto';
+
+            const fecha = sale.created_at ? new Date(sale.created_at).toLocaleString('es-AR', {
+                day: '2-digit', month: '2-digit', year: 'numeric',
+                hour: '2-digit', minute: '2-digit'
+            }) : '-';
+
+            const formatMonto = (m) => new Intl.NumberFormat('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(m);
+            const formatVtoCAE = (vto) => {
+                if (!vto) return '-';
+                const str = String(vto).replace(/-/g, '');
+                if (str.length === 8) return `${str.slice(6, 8)}/${str.slice(4, 6)}/${str.slice(0, 4)}`;
+                return new Date(vto).toLocaleDateString('es-AR');
+            };
+
+            const total = Number(sale.total || 0);
+            const subtotal = Number(sale.subtotal ?? sale.total ?? 0);
+            const descuento = Number(sale.discount || 0);
+            const nroComp = sale.pto_vta && sale.cbte_nro
+                ? `${String(sale.pto_vta).padStart(4, '0')}-${String(sale.cbte_nro).padStart(8, '0')}`
+                : '-';
+            const tipoComp = sale.cbte_tipo === 1 ? 'Factura A' : sale.cbte_tipo === 6 ? 'Factura B' : sale.cbte_tipo === 11 ? 'Factura C' : 'Comprobante';
+
+            const itemsHtml = Array.isArray(sale.items) && sale.items.length > 0
+                ? sale.items.map((item) => {
+                    const cantidad = Number(item.quantity || 0);
+                    const precio = Number(item.price_at_sale || item.price || 0);
+                    const totalItem = cantidad * precio;
+                    return `
+                        <tr>
+                            <td>${cantidad % 1 === 0 ? cantidad : cantidad.toFixed(2)}</td>
+                            <td>${escapearHtml(item.name || item.product_name || '-')}</td>
+                            <td style="text-align:right;">$ ${formatMonto(totalItem)}</td>
+                        </tr>
+                    `;
+                }).join('')
+                : `
+                    <tr>
+                        <td colspan="3" style="text-align:center;">Detalle de items no disponible</td>
+                    </tr>
+                `;
+
+            const contenido = `
+            <html>
+            <head>
+                <title>Ticket ${escapearHtml(nroComp)}</title>
+                <style>
+                    * { box-sizing: border-box; }
+                    @page { size: ${thermalPaperWidth}mm auto; margin: 0; }
+                    html, body {
+                        margin: 0;
+                        padding: 0;
+                        width: ${thermalPaperWidth}mm;
+                        font-family: monospace;
+                        color: #000;
+                        background: #fff;
+                        font-size: ${thermalPaperWidth === '80' ? '12px' : '11px'};
+                    }
+                    .ticket { width: ${thermalPaperWidth}mm; padding: 2mm; }
+                    .center { text-align: center; }
+                    .line { border-top: 1px dashed #000; margin: 6px 0; }
+                    p { margin: 0; }
+                    table { width: 100%; border-collapse: collapse; }
+                    th, td { padding: 2px 0; vertical-align: top; }
+                    th { text-align: left; }
+                    .row { display: flex; justify-content: space-between; gap: 8px; }
+                    .total { font-weight: bold; font-size: ${thermalPaperWidth === '80' ? '14px' : '13px'}; }
+                </style>
+            </head>
+            <body>
+                <div class="ticket">
+                    <div class="center">
+                        <p style="font-size:16px; font-weight:bold;">${escapearHtml(businessName)}</p>
+                        ${businessAddress ? `<p>${escapearHtml(businessAddress)}</p>` : ''}
+                        <p>CUIT: ${escapearHtml(businessTaxId)}</p>
+                        <p>${escapearHtml(condicionIVA)}</p>
+                    </div>
+
+                    <div class="line"></div>
+
+                    <p>Fecha: ${escapearHtml(fecha)}</p>
+                    <p>${escapearHtml(tipoComp)}: ${escapearHtml(nroComp)}</p>
+                    <p>Cliente: ${escapearHtml(sale.client_name || 'Consumidor Final')}</p>
+                    <p>Pago: ${escapearHtml(sale.payment_method || '-')}</p>
+
+                    <div class="line"></div>
+
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Cant</th>
+                                <th>Desc</th>
+                                <th style="text-align:right;">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${itemsHtml}
+                        </tbody>
+                    </table>
+
+                    <div class="line"></div>
+
+                    <div class="row"><span>SUBTOTAL</span><span>$ ${formatMonto(subtotal)}</span></div>
+                    ${descuento > 0 ? `<div class="row"><span>DESCUENTO</span><span>-$ ${formatMonto(descuento)}</span></div>` : ''}
+                    <div class="row total"><span>TOTAL</span><span>$ ${formatMonto(total)}</span></div>
+
+                    ${sale.cae ? `
+                        <div class="line"></div>
+                        <div class="center">
+                            <p>CAE: ${escapearHtml(sale.cae)}</p>
+                            <p>Vto CAE: ${escapearHtml(formatVtoCAE(sale.cae_expiration))}</p>
+                        </div>
+                    ` : ''}
+
+                    <div class="line"></div>
+                    <p class="center">¡Gracias por su compra!</p>
+                </div>
+            </body>
+            </html>`;
+
+            ventana.document.write(contenido);
+            ventana.document.close();
+            ventana.focus();
+            setTimeout(() => ventana.print(), 300);
+        } catch (error) {
+            console.error("Error fetching sale details", error);
+            alert("Error al cargar detalles de la venta");
+        }
+    };
+
     const formatDate = (dateString) => {
         if (!dateString) return '-';
         return new Date(dateString).toLocaleString('es-AR', {
@@ -270,12 +423,20 @@ const Sales = () => {
                                         </button>
                                     )}
                                     {sale.invoice_status === 'APPROVED' && (
-                                        <button 
-                                            className="secondary-btn text-xs text-secondary"
-                                            onClick={() => handlePrint(sale.id)}
-                                        >
-                                            <FaFileInvoice /> Ver
-                                        </button>
+                                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                            <button
+                                                className="secondary-btn text-xs"
+                                                onClick={() => handlePrintTicket(sale.id)}
+                                            >
+                                                <FaTicketAlt /> Imprimir ticket
+                                            </button>
+                                            <button 
+                                                className="secondary-btn text-xs text-secondary"
+                                                onClick={() => handlePrint(sale.id)}
+                                            >
+                                                <FaPrint /> Imprimir A4
+                                            </button>
+                                        </div>
                                     )}
                                 </td>
                             </tr>
