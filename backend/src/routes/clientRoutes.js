@@ -8,6 +8,7 @@ router.get('/', protect, clientController.getClients);
 router.post('/', protect, clientController.createClient);
 router.get('/:id', protect, clientController.getClientById);
 router.put('/:id', protect, isAdmin, clientController.updateClient);
+router.delete('/:id', protect, isAdmin, clientController.deleteClient);
 router.post('/payment', protect, requireOpenCashSession, clientController.registerPayment);
 
 module.exports = router;

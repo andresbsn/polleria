@@ -35,6 +35,25 @@ exports.updateClient = async (req, res) => {
     }
 };
 
+// Delete Client
+exports.deleteClient = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const result = await db.query('DELETE FROM clients WHERE id = $1 RETURNING id', [id]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Client not found' });
+        }
+
+        res.json({ message: 'Client deleted successfully' });
+    } catch (e) {
+        if (e.code === '23503') {
+            return res.status(409).json({ error: 'No se puede eliminar el cliente porque tiene movimientos o ventas asociadas' });
+        }
+        res.status(500).json({ error: e.message });
+    }
+};
+
 // Create Client
 exports.createClient = async (req, res) => {
     const { name, tax_id, tax_type, address, phone, email } = req.body;

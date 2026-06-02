@@ -1,16 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { getClients, createClient } from '../services/api';
+import { getClients, createClient, updateClient, deleteClient } from '../services/api';
 import { useNavigate } from 'react-router-dom';
-import { FaPlus, FaSearch, FaUser } from 'react-icons/fa';
+import { FaPlus, FaSearch, FaUser, FaEdit, FaTrash } from 'react-icons/fa';
 
 const Clients = () => {
     const [clients, setClients] = useState([]);
     const [filteredClients, setFilteredClients] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [showModal, setShowModal] = useState(false);
+    const [showEditModal, setShowEditModal] = useState(false);
     const [newClient, setNewClient] = useState({ name: '', phone: '', address: '', tax_id: '', tax_type: 'DNI', email: '' });
+    const [editingClientId, setEditingClientId] = useState(null);
+    const [editClient, setEditClient] = useState({ name: '', phone: '', address: '', tax_id: '', tax_type: 'DNI', email: '' });
     
     const navigate = useNavigate();
+    const role = localStorage.getItem('role');
+    const isAdmin = role === 'admin' || role === 'superadmin';
 
     useEffect(() => {
         loadClients();
@@ -23,6 +28,46 @@ const Clients = () => {
             setFilteredClients(data);
         } catch (error) {
             console.error(error);
+        }
+    };
+
+    const handleOpenEdit = (e, client) => {
+        e.stopPropagation();
+        setEditingClientId(client.id);
+        setEditClient({
+            name: client.name || '',
+            phone: client.phone || '',
+            address: client.address || '',
+            tax_id: client.tax_id || '',
+            tax_type: client.tax_type || 'DNI',
+            email: client.email || ''
+        });
+        setShowEditModal(true);
+    };
+
+    const handleEditSubmit = async (e) => {
+        e.preventDefault();
+        try {
+            await updateClient(editingClientId, editClient);
+            setShowEditModal(false);
+            setEditingClientId(null);
+            setEditClient({ name: '', phone: '', address: '', tax_id: '', tax_type: 'DNI', email: '' });
+            loadClients();
+        } catch (error) {
+            alert(error.response?.data?.error || error.message);
+        }
+    };
+
+    const handleDeleteClient = async (e, clientId) => {
+        e.stopPropagation();
+        const confirmed = window.confirm('¿Seguro que querés eliminar este cliente?');
+        if (!confirmed) return;
+
+        try {
+            await deleteClient(clientId);
+            loadClients();
+        } catch (error) {
+            alert(error.response?.data?.error || error.message);
         }
     };
 
@@ -86,6 +131,25 @@ const Clients = () => {
                         </div>
                         <p className="text-secondary text-sm">{client.phone || 'Sin teléfono'}</p>
                         <p className="text-secondary text-sm">{client.tax_type}: {client.tax_id || '-'}</p>
+                        {isAdmin && (
+                            <div className="flex gap-2 mt-3">
+                                <button
+                                    type="button"
+                                    className="secondary-btn flex-1 flex-center gap-2"
+                                    onClick={(e) => handleOpenEdit(e, client)}
+                                >
+                                    <FaEdit /> Editar
+                                </button>
+                                <button
+                                    type="button"
+                                    className="secondary-btn flex-1 flex-center gap-2"
+                                    style={{ borderColor: '#ef4444', color: '#ef4444' }}
+                                    onClick={(e) => handleDeleteClient(e, client.id)}
+                                >
+                                    <FaTrash /> Eliminar
+                                </button>
+                            </div>
+                        )}
                     </div>
                 ))}
             </div>
@@ -141,6 +205,72 @@ const Clients = () => {
                             <div className="flex gap-4 mt-4">
                                 <button type="button" className="secondary-btn flex-1" onClick={() => setShowModal(false)}>Cancelar</button>
                                 <button type="submit" className="primary-btn flex-1">Guardar</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Edit Modal */}
+            {showEditModal && (
+                <div className="fixed inset-0 bg-black/80 flex-center z-50">
+                    <div className="glass-panel p-6 w-[500px] animate-fade-in">
+                        <h2 className="text-xl font-bold mb-4">Editar Cliente</h2>
+                        <form onSubmit={handleEditSubmit} className="flex flex-col gap-4">
+                            <input
+                                placeholder="Nombre Completo *"
+                                value={editClient.name}
+                                onChange={e => setEditClient({ ...editClient, name: e.target.value })}
+                                required
+                                className="input-field"
+                            />
+                            <div className="flex gap-2">
+                                <select
+                                    className="input-field w-24"
+                                    value={editClient.tax_type}
+                                    onChange={e => setEditClient({ ...editClient, tax_type: e.target.value })}
+                                >
+                                    <option>DNI</option>
+                                    <option>CUIT</option>
+                                    <option>CUIL</option>
+                                </select>
+                                <input
+                                    placeholder="Número Documento"
+                                    value={editClient.tax_id}
+                                    onChange={e => setEditClient({ ...editClient, tax_id: e.target.value })}
+                                    className="input-field flex-1"
+                                />
+                            </div>
+                            <input
+                                placeholder="Teléfono"
+                                value={editClient.phone}
+                                onChange={e => setEditClient({ ...editClient, phone: e.target.value })}
+                                className="input-field"
+                            />
+                            <input
+                                placeholder="Dirección"
+                                value={editClient.address}
+                                onChange={e => setEditClient({ ...editClient, address: e.target.value })}
+                                className="input-field"
+                            />
+                            <input
+                                placeholder="Email"
+                                value={editClient.email}
+                                onChange={e => setEditClient({ ...editClient, email: e.target.value })}
+                                className="input-field"
+                            />
+                            <div className="flex gap-4 mt-4">
+                                <button
+                                    type="button"
+                                    className="secondary-btn flex-1"
+                                    onClick={() => {
+                                        setShowEditModal(false);
+                                        setEditingClientId(null);
+                                    }}
+                                >
+                                    Cancelar
+                                </button>
+                                <button type="submit" className="primary-btn flex-1">Guardar cambios</button>
                             </div>
                         </form>
                     </div>
